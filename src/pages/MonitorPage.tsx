@@ -10,27 +10,42 @@ import { Phone, Users, Star, AlertTriangle, Calendar } from 'lucide-react';
 
 export function MonitorPage() {
   const { usageStats, alerts, resolveAlert } = useMonitorStore();
-  const { assignments, employees, applications } = usePersonalityStore();
+  const { assignments, employees } = usePersonalityStore();
 
   const openAlerts = alerts.filter((a) => a.status === 'open');
   const renewalAlerts = alerts.filter((a) => a.type === 'expiring_soon' && a.status === 'open');
   const otherAlerts = alerts.filter((a) => a.type !== 'expiring_soon' && a.status === 'open');
 
   const getEmployeeUsage = () => {
-    const employeeMap = new Map<string, { name: string; avatar: string; personas: { id: string; name: string }[]; callCount: number; satisfaction: number }>();
+    const employeeMap = new Map<string, {
+      name: string;
+      avatar: string;
+      personas: { id: string; name: string; assignedAt: string }[];
+      callCount: number;
+      satisfaction: number;
+    }>();
 
     assignments.forEach((assignment) => {
       const existing = employeeMap.get(assignment.userId);
       if (existing) {
         if (!existing.personas.find((p) => p.id === assignment.personalityId)) {
-          existing.personas.push({ id: assignment.personalityId, name: assignment.personality.name });
+          existing.personas.push({
+            id: assignment.personalityId,
+            name: assignment.personality.name,
+            assignedAt: assignment.assignedAt
+          });
         }
         existing.callCount += Math.floor(Math.random() * 500) + 100;
       } else {
         employeeMap.set(assignment.userId, {
           name: assignment.userName,
-          avatar: employees.find((e) => e.id === assignment.userId)?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
-          personas: [{ id: assignment.personalityId, name: assignment.personality.name }],
+          avatar: employees.find((e) => e.id === assignment.userId)?.avatar ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.userName}`,
+          personas: [{
+            id: assignment.personalityId,
+            name: assignment.personality.name,
+            assignedAt: assignment.assignedAt
+          }],
           callCount: Math.floor(Math.random() * 500) + 100,
           satisfaction: 4 + Math.random(),
         });
@@ -139,43 +154,47 @@ export function MonitorPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {employeeUsage.map((employee, index) => {
-                    const assignment = assignments.find((a) => a.userId === employee.name);
-                    return (
-                      <tr key={index} className="border-b border-dark-50 hover:bg-dark-50 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <img src={employee.avatar} alt={employee.name} className="w-8 h-8 rounded-full" />
-                            <span className="font-medium text-dark-900">{employee.name}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-wrap gap-1">
-                            {employee.personas.map((p) => (
-                              <Badge key={p.id} variant="primary" className="text-xs">
+                  {employeeUsage.map((employee, index) => (
+                    <tr key={index} className="border-b border-dark-50 hover:bg-dark-50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <img src={employee.avatar} alt={employee.name} className="w-8 h-8 rounded-full" />
+                          <span className="font-medium text-dark-900">{employee.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col gap-1">
+                          {employee.personas.map((p) => (
+                            <div key={p.id} className="flex items-center gap-2">
+                              <Badge variant="primary" className="text-xs">
                                 {p.name}
                               </Badge>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1 text-sm text-dark-500">
-                            <Calendar className="w-4 h-4" />
-                            {assignment ? new Date(assignment.assignedAt).toLocaleDateString('zh-CN') : '-'}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right font-mono text-dark-900">
-                          {employee.callCount.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                            <span className="font-medium text-dark-900">{employee.satisfaction.toFixed(1)}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                              <span className="text-xs text-dark-400">
+                                {new Date(p.assignedAt).toLocaleDateString('zh-CN')}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1 text-sm text-dark-500">
+                          <Calendar className="w-4 h-4" />
+                          {employee.personas[0]?.assignedAt
+                            ? new Date(employee.personas[0].assignedAt).toLocaleDateString('zh-CN')
+                            : '-'}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-dark-900">
+                        {employee.callCount.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                          <span className="font-medium text-dark-900">{employee.satisfaction.toFixed(1)}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

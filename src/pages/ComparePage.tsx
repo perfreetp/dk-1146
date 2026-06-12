@@ -16,32 +16,25 @@ export function ComparePage() {
   const [question, setQuestion] = useState('');
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [initializedFromUrl, setInitializedFromUrl] = useState(false);
 
   useEffect(() => {
     const ids = searchParams.get('ids');
-    if (ids) {
+    if (ids && !initializedFromUrl) {
       const parsedIds = ids.split(',').filter((id) => {
         const p = personalities.find((personality) => personality.id === id);
         return p && p.isActive;
       });
       if (parsedIds.length > 0) {
         setSelectedPersonalityIds(parsedIds);
+        setInitializedFromUrl(true);
       }
     }
-  }, [searchParams, personalities]);
+  }, [searchParams, personalities, initializedFromUrl]);
 
   const allActivePersonalities = useMemo(() => {
     return personalities.filter((p) => p.isActive);
   }, [personalities]);
-
-  const displayPersonalities = useMemo(() => {
-    if (selectedPersonalityIds.length > 0) {
-      return selectedPersonalityIds
-        .map((id) => allActivePersonalities.find((p) => p.id === id))
-        .filter((p): p is Personality => p !== undefined);
-    }
-    return allActivePersonalities.slice(0, 6);
-  }, [selectedPersonalityIds, allActivePersonalities]);
 
   const togglePersonality = (id: string) => {
     const personality = personalities.find((p) => p.id === id);
@@ -106,10 +99,8 @@ export function ComparePage() {
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const idsToEvaluate = selectedPersonalityIds.length > 0 ? selectedPersonalityIds : displayPersonalities.slice(0, 5).map((p) => p.id);
-
-    const evaluationResults: EvaluationResult[] = displayPersonalities
-      .filter((p) => idsToEvaluate.includes(p.id) && p.isActive)
+    const evaluationResults: EvaluationResult[] = allActivePersonalities
+      .filter((p) => selectedPersonalityIds.includes(p.id) && p.isActive)
       .map((personality) => ({
         personalityId: personality.id,
         personality,
@@ -125,6 +116,9 @@ export function ComparePage() {
     setIsLoading(false);
   };
 
+  const displayCount = selectedPersonalityIds.length > 0 ? selectedPersonalityIds.length : allActivePersonalities.length;
+  const hasUrlParam = !!searchParams.get('ids');
+
   return (
     <PageContainer>
       <div className="space-y-6 animate-fade-in">
@@ -139,63 +133,109 @@ export function ComparePage() {
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-accent" />
             <h3 className="font-semibold text-dark-900">选择要对比的人格</h3>
-            <Badge variant="info">{selectedPersonalityIds.length > 0 ? selectedPersonalityIds.length : displayPersonalities.length}/5</Badge>
-            {searchParams.get('ids') && (
+            <Badge variant="info">{displayCount}/5</Badge>
+            {hasUrlParam && (
               <Badge variant="success" className="ml-2">
-                从{selectedPersonalityIds.length > 1 ? '候选清单' : '人格详情'}选中
+                已从{selectedPersonalityIds.length > 1 ? '候选清单' : '人格详情'}选中
               </Badge>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {displayPersonalities.map((personality) => {
-              const isSelected = selectedPersonalityIds.includes(personality.id);
-              const isDisabled = !personality.isActive;
-              return (
-                <button
-                  key={personality.id}
-                  onClick={() => togglePersonality(personality.id)}
-                  disabled={isDisabled}
-                  className={`p-3 rounded-xl border-2 transition-all text-left ${
-                    isDisabled
-                      ? 'border-dark-100 opacity-50 cursor-not-allowed bg-dark-50'
-                      : isSelected
-                      ? 'border-primary bg-primary/5'
-                      : 'border-dark-100 hover:border-dark-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <img
-                      src={personality.avatar}
-                      alt={personality.name}
-                      className="w-10 h-10 rounded-lg object-cover bg-dark-50"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-dark-900 text-sm truncate">
-                        {personality.name}
-                        {isDisabled && <span className="text-red-500 ml-1">(已停用)</span>}
-                      </p>
-                      <p className="text-xs text-dark-400 truncate">
-                        {personality.taskType === 'customer_service'
-                          ? '客服'
-                          : personality.taskType === 'sales'
-                          ? '销售'
-                          : '培训'}
-                      </p>
-                    </div>
-                    {isSelected && !isDisabled && (
+
+          {selectedPersonalityIds.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+              {selectedPersonalityIds.map((id) => {
+                const personality = allActivePersonalities.find((p) => p.id === id);
+                if (!personality) return null;
+                return (
+                  <button
+                    key={personality.id}
+                    onClick={() => togglePersonality(personality.id)}
+                    className="p-3 rounded-xl border-2 border-primary bg-primary/5 transition-all text-left"
+                  >
+                    <div className="flex items-start gap-2">
+                      <img
+                        src={personality.avatar}
+                        alt={personality.name}
+                        className="w-10 h-10 rounded-lg object-cover bg-dark-50"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-dark-900 text-sm truncate">{personality.name}</p>
+                        <p className="text-xs text-dark-400 truncate">
+                          {personality.taskType === 'customer_service'
+                            ? '客服'
+                            : personality.taskType === 'sales'
+                            ? '销售'
+                            : '培训'}
+                        </p>
+                      </div>
                       <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                         <Check className="w-3 h-3 text-white" />
                       </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <div className="border-t border-dark-100 pt-4">
+            <p className="text-sm text-dark-500 mb-3">
+              {selectedPersonalityIds.length > 0
+                ? '点击下方人格可临时增减（最多选择5个）'
+                : '请从下方选择人格进行对比（最多5个）'}
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {allActivePersonalities.map((personality) => {
+                const isSelected = selectedPersonalityIds.includes(personality.id);
+                const isDisabled = !personality.isActive || (selectedPersonalityIds.length >= 5 && !isSelected);
+                return (
+                  <button
+                    key={personality.id}
+                    onClick={() => togglePersonality(personality.id)}
+                    disabled={isDisabled}
+                    className={`p-3 rounded-xl border-2 transition-all text-left ${
+                      isDisabled
+                        ? 'border-dark-100 opacity-50 cursor-not-allowed bg-dark-50'
+                        : isSelected
+                        ? 'border-primary bg-primary/5'
+                        : 'border-dark-100 hover:border-dark-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <img
+                        src={personality.avatar}
+                        alt={personality.name}
+                        className="w-10 h-10 rounded-lg object-cover bg-dark-50"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-dark-900 text-sm truncate">
+                          {personality.name}
+                          {isDisabled && !personality.isActive && <span className="text-red-500 ml-1">(已停用)</span>}
+                        </p>
+                        <p className="text-xs text-dark-400 truncate">
+                          {personality.taskType === 'customer_service'
+                            ? '客服'
+                            : personality.taskType === 'sales'
+                            ? '销售'
+                            : '培训'}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
           <p className="text-sm text-dark-400 mt-3">
             {selectedPersonalityIds.length > 0
-              ? `已选中 ${selectedPersonalityIds.length} 个人格`
-              : `默认展示前 ${Math.min(6, displayPersonalities.length)} 个人格，请点击选择您要对比的人格`}
+              ? `已选中 ${selectedPersonalityIds.length} 个人格，点击上方选中的人格可取消选择`
+              : `共 ${allActivePersonalities.length} 个活跃人格可选择`}
           </p>
         </Card>
 
@@ -210,8 +250,10 @@ export function ComparePage() {
             </div>
             <h3 className="text-lg font-semibold text-dark-900 mb-2">开始您的评测</h3>
             <p className="text-dark-500 max-w-md mx-auto">
-              {selectedPersonalityIds.length > 0 || searchParams.get('ids')
-                ? `已选择 ${selectedPersonalityIds.length > 0 ? selectedPersonalityIds.length : displayPersonalities.length} 个人格，请输入您的问题`
+              {selectedPersonalityIds.length > 0
+                ? `已选择 ${selectedPersonalityIds.length} 个人格，请输入您的问题开始评测`
+                : hasUrlParam
+                ? `已选择 ${allActivePersonalities.length} 个人格，请输入您的问题开始评测`
                 : '请先选择 2-5 个想要对比的 AI 人格，然后输入您的问题，系统将生成各人格的回答供您对比分析'}
             </p>
           </Card>

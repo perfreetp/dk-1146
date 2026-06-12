@@ -71,13 +71,25 @@ export const useMonitorStore = create<MonitorState>((set, get) => ({
 
   resolveAlert: (id) => {
     const state = get();
-    const newAlerts = state.alerts.map((alert) =>
+    const alertToResolve = state.alerts.find((a) => a.id === id);
+    
+    let newAlerts = state.alerts.map((alert) =>
       alert.id === id
         ? { ...alert, status: 'resolved' as const, resolvedAt: new Date().toISOString().split('T')[0] }
         : alert
     );
-    set({ alerts: newAlerts });
-    saveToStorage({ ...state, alerts: newAlerts });
+
+    let newQuotas = [...state.quotas];
+    if (alertToResolve?.type === 'expiring_soon' && alertToResolve?.companyId) {
+      newQuotas = state.quotas.map((quota) =>
+        quota.companyId === alertToResolve.companyId
+          ? { ...quota, renewalNotice: false }
+          : quota
+      );
+    }
+
+    set({ alerts: newAlerts, quotas: newQuotas });
+    saveToStorage({ quotas: newQuotas, alerts: newAlerts });
   },
 
   resolveQuotaAlert: (companyId) => {

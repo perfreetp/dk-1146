@@ -21,6 +21,8 @@ export function PersonalityDetail({ personality, isOpen, onClose }: PersonalityD
   const isInShortlist = shortlist.some((s) => s.personalityId === personality.id);
 
   const handleToggleShortlist = () => {
+    if (!personality.isActive) return;
+    
     if (isInShortlist) {
       const item = shortlist.find((s) => s.personalityId === personality.id);
       if (item) removeFromShortlist(item.id);
@@ -30,11 +32,13 @@ export function PersonalityDetail({ personality, isOpen, onClose }: PersonalityD
   };
 
   const handleStartTrial = () => {
+    if (!personality.isActive) return;
     navigate(`/compare?ids=${personality.id}`);
     onClose();
   };
 
   const handleTrialWithShortlist = () => {
+    if (!personality.isActive) return;
     const shortlistIds = shortlist.map((s) => s.personalityId);
     if (shortlistIds.length > 0) {
       navigate(`/compare?ids=${[personality.id, ...shortlistIds].slice(0, 5).join(',')}`);
