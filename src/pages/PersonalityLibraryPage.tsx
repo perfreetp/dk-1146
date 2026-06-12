@@ -3,20 +3,34 @@ import { PageContainer } from '../components/layout/PageContainer';
 import { PersonalityCard } from '../components/personality/PersonalityCard';
 import { PersonalityFilter } from '../components/personality/PersonalityFilter';
 import { PersonalityDetail } from '../components/personality/PersonalityDetail';
+import { Button } from '../components/common/Button';
 import { usePersonalityStore } from '../stores/personalityStore';
+import { Eye, EyeOff } from 'lucide-react';
 
 export function PersonalityLibraryPage() {
-  const { filteredPersonalities, selectedPersonality, selectPersonality, clearSelection } =
+  const { filteredPersonalities, selectedPersonality, selectPersonality, clearSelection, filters, setFilter } =
     usePersonalityStore();
 
   return (
     <PageContainer>
       <div className="space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-3xl font-bold text-dark-900 mb-2">人格库</h1>
-          <p className="text-dark-500">
-            浏览并筛选适合您业务场景的 AI 人格，已收录 {filteredPersonalities.length} 个优质人格
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-dark-900 mb-2">人格库</h1>
+            <p className="text-dark-500">
+              浏览并筛选适合您业务场景的 AI 人格，已收录 {filteredPersonalities.length} 个人格
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={filters.showInactive ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setFilter('showInactive', !filters.showInactive)}
+            >
+              {filters.showInactive ? <Eye className="w-4 h-4 mr-1" /> : <EyeOff className="w-4 h-4 mr-1" />}
+              {filters.showInactive ? '显示全部' : '显示已停用'}
+            </Button>
+          </div>
         </div>
 
         <PersonalityFilter />

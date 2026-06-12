@@ -5,12 +5,40 @@ import { StatsCard } from '../components/monitor/StatsCard';
 import { UsageChart } from '../components/monitor/UsageChart';
 import { AlertList } from '../components/monitor/AlertList';
 import { useMonitorStore } from '../stores/monitorStore';
-import { Phone, Users, Star, AlertTriangle } from 'lucide-react';
+import { usePersonalityStore } from '../stores/personalityStore';
+import { Phone, Users, Star, AlertTriangle, Calendar } from 'lucide-react';
 
 export function MonitorPage() {
-  const { usageStats, employeeUsage, alerts, resolveAlert } = useMonitorStore();
+  const { usageStats, alerts, resolveAlert } = useMonitorStore();
+  const { assignments, employees } = usePersonalityStore();
 
   const openAlerts = alerts.filter((a) => a.status === 'open');
+
+  const getEmployeeUsage = () => {
+    const employeeMap = new Map<string, { name: string; avatar: string; personas: { id: string; name: string }[]; callCount: number; satisfaction: number }>();
+
+    assignments.forEach((assignment) => {
+      const existing = employeeMap.get(assignment.userId);
+      if (existing) {
+        if (!existing.personas.find((p) => p.id === assignment.personalityId)) {
+          existing.personas.push({ id: assignment.personalityId, name: assignment.personality.name });
+        }
+        existing.callCount += Math.floor(Math.random() * 500) + 100;
+      } else {
+        employeeMap.set(assignment.userId, {
+          name: assignment.userName,
+          avatar: employees.find((e) => e.id === assignment.userId)?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
+          personas: [{ id: assignment.personalityId, name: assignment.personality.name }],
+          callCount: Math.floor(Math.random() * 500) + 100,
+          satisfaction: 4 + Math.random(),
+        });
+      }
+    });
+
+    return Array.from(employeeMap.values());
+  };
+
+  const employeeUsage = getEmployeeUsage();
 
   return (
     <PageContainer>
@@ -68,48 +96,66 @@ export function MonitorPage() {
 
         <Card>
           <CardTitle className="mb-4">员工使用明细</CardTitle>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-dark-100">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">员工</th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">使用人格</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-dark-700">调用次数</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-dark-700">满意度</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employeeUsage.map((employee) => (
-                  <tr key={employee.id} className="border-b border-dark-50 hover:bg-dark-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <img src={employee.avatar} alt={employee.name} className="w-8 h-8 rounded-full" />
-                        <span className="font-medium text-dark-900">{employee.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {employee.assignedPersonas.map((p) => (
-                          <Badge key={p.id} variant="primary" className="text-xs">
-                            {p.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-dark-900">
-                      {employee.callCount.toLocaleString()}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="font-medium text-dark-900">{employee.satisfaction}</span>
-                      </div>
-                    </td>
+          {employeeUsage.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-dark-100">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">员工</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">使用人格</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-dark-700">分配时间</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-dark-700">调用次数</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-dark-700">满意度</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {employeeUsage.map((employee, index) => {
+                    const assignment = assignments.find((a) => a.userId === employee.name);
+                    return (
+                      <tr key={index} className="border-b border-dark-50 hover:bg-dark-50 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <img src={employee.avatar} alt={employee.name} className="w-8 h-8 rounded-full" />
+                            <span className="font-medium text-dark-900">{employee.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-wrap gap-1">
+                            {employee.personas.map((p) => (
+                              <Badge key={p.id} variant="primary" className="text-xs">
+                                {p.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1 text-sm text-dark-500">
+                            <Calendar className="w-4 h-4" />
+                            {assignment ? new Date(assignment.assignedAt).toLocaleDateString('zh-CN') : '-'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono text-dark-900">
+                          {employee.callCount.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                            <span className="font-medium text-dark-900">{employee.satisfaction.toFixed(1)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-dark-400">
+              <Users className="w-12 h-12 mx-auto mb-2 text-dark-300" />
+              <p>暂无分配记录</p>
+              <p className="text-sm mt-1">批准采购申请后分配给员工即可查看</p>
+            </div>
+          )}
         </Card>
 
         {openAlerts.length > 3 && (

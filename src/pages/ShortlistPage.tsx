@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Card, CardTitle } from '../components/common/Card';
-import { Badge } from '../components/common/Badge';
-import { Button } from '../components/common/Button';
+import { Badge, Button } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
-import { Input, Textarea, Select } from '../components/common/Input';
+import { Input, Textarea } from '../components/common/Input';
 import { usePersonalityStore } from '../stores/personalityStore';
-import { Star, Trash2, Send, Calendar, DollarSign, CheckCircle } from 'lucide-react';
+import { Star, Trash2, Send, Calendar, DollarSign, CheckCircle, Play } from 'lucide-react';
 
 export function ShortlistPage() {
+  const navigate = useNavigate();
   const { shortlist, removeFromShortlist, submitApplication } = usePersonalityStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [usage, setUsage] = useState('');
@@ -31,6 +32,13 @@ export function ShortlistPage() {
     }, 2000);
   };
 
+  const handleTrialAll = () => {
+    if (shortlist.length > 0) {
+      const ids = shortlist.map((s) => s.personalityId).join(',');
+      navigate(`/compare?ids=${ids}`);
+    }
+  };
+
   return (
     <PageContainer>
       <div className="space-y-6 animate-fade-in">
@@ -41,7 +49,13 @@ export function ShortlistPage() {
               已收藏 {shortlist.length} 个人格，总预算 ¥{totalBudget.toLocaleString()}
             </p>
           </div>
-          {shortlist.length > 0 && (
+          <div className="flex gap-3">
+            {shortlist.length > 1 && (
+              <Button variant="outline" onClick={handleTrialAll}>
+                <Play className="w-4 h-4 mr-2" />
+                对比试用全部
+              </Button>
+            )}
             <Button
               variant="primary"
               onClick={() => setIsModalOpen(true)}
@@ -50,7 +64,7 @@ export function ShortlistPage() {
               <Send className="w-4 h-4 mr-2" />
               提交采购申请
             </Button>
-          )}
+          </div>
         </div>
 
         {shortlist.length === 0 ? (
@@ -62,7 +76,7 @@ export function ShortlistPage() {
             <p className="text-dark-500 mb-6 max-w-md mx-auto">
               您还没有添加任何人格到候选清单，去人格库看看吧！
             </p>
-            <Button variant="primary" onClick={() => window.location.href = '/personalities'}>
+            <Button variant="primary" onClick={() => navigate('/personalities')}>
               浏览人格库
             </Button>
           </Card>
@@ -117,9 +131,19 @@ export function ShortlistPage() {
                         备注：{item.notes}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 text-xs text-dark-400">
-                      <Calendar className="w-3 h-3" />
-                      添加于 {new Date(item.addedAt).toLocaleDateString('zh-CN')}
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2 text-xs text-dark-400">
+                        <Calendar className="w-3 h-3" />
+                        添加于 {new Date(item.addedAt).toLocaleDateString('zh-CN')}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/compare?ids=${item.personalityId}`)}
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        试用此人格
+                      </Button>
                     </div>
                   </div>
                   <button

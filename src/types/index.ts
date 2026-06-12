@@ -15,6 +15,16 @@ export interface User {
   createdAt: string;
 }
 
+export interface Employee {
+  id: string;
+  companyId: string;
+  name: string;
+  email: string;
+  department: string;
+  avatar?: string;
+  isActive: boolean;
+}
+
 export interface Quota {
   id: string;
   companyId: string;
@@ -22,6 +32,7 @@ export interface Quota {
   usedCalls: number;
   warningThreshold: number;
   expiresAt: string;
+  renewalNotice: boolean;
 }
 
 export type ComplianceLevel = 'S' | 'A' | 'B' | 'C';
@@ -73,6 +84,8 @@ export interface Application {
   status: ApplicationStatus;
   createdAt: string;
   rejectionReason?: string;
+  approvedAt?: string;
+  assignedEmployees?: string[];
 }
 
 export interface Assignment {
@@ -84,6 +97,7 @@ export interface Assignment {
   personality: Personality;
   expiresAt: string;
   isActive: boolean;
+  assignedAt: string;
 }
 
 export interface UsageLog {
@@ -95,7 +109,7 @@ export interface UsageLog {
   isSatisfied: boolean;
 }
 
-export type AlertType = 'anomaly' | 'quota_warning' | 'compliance';
+export type AlertType = 'anomaly' | 'quota_warning' | 'compliance' | 'expiring_soon';
 export type AlertStatus = 'open' | 'resolved';
 
 export interface Alert {
@@ -106,6 +120,8 @@ export interface Alert {
   status: AlertStatus;
   createdAt: string;
   resolvedAt?: string;
+  relatedPersonalityId?: string;
+  relatedCompanyId?: string;
 }
 
 export interface UsageStats {
@@ -143,6 +159,7 @@ export interface FilterOptions {
   responseStyle?: string;
   search?: string;
   sortBy?: 'rating' | 'monthlyCalls' | 'price' | 'newest';
+  showInactive?: boolean;
 }
 
 export interface NavItem {
@@ -150,4 +167,9 @@ export interface NavItem {
   label: string;
   icon: string;
   badge?: number;
+}
+
+export interface CompareSession {
+  selectedPersonalityIds: string[];
+  question?: string;
 }

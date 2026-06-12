@@ -1,6 +1,7 @@
 import type {
   Company,
   User,
+  Employee,
   Quota,
   Personality,
   ShortlistItem,
@@ -27,12 +28,22 @@ export const mockUsers: User[] = [
   { id: 'u5', companyId: 'c4', name: '陈静', email: 'chenjing@edu.com', role: 'purchaser', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chen', createdAt: '2024-04-05' },
 ];
 
+export const mockEmployees: Employee[] = [
+  { id: 'e1', companyId: 'c1', name: '张明', email: 'zhangming@techcorp.com', department: '技术部', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhang', isActive: true },
+  { id: 'e2', companyId: 'c1', name: '李华', email: 'lihua@techcorp.com', department: '客服部', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Li', isActive: true },
+  { id: 'e3', companyId: 'c1', name: '王芳', email: 'wangfang@techcorp.com', department: '销售部', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wang', isActive: true },
+  { id: 'e4', companyId: 'c1', name: '赵伟', email: 'zhaowei@techcorp.com', department: '培训部', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhao', isActive: true },
+  { id: 'e5', companyId: 'c1', name: '周敏', email: 'zhoumin@techcorp.com', department: '客服部', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhou', isActive: true },
+  { id: 'e6', companyId: 'c1', name: '吴强', email: 'wuqiang@techcorp.com', department: '销售部', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wu', isActive: true },
+  { id: 'e7', companyId: 'c1', name: '孙丽', email: 'sunli@techcorp.com', department: '人力资源部', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sun', isActive: true },
+];
+
 export const mockQuotas: Quota[] = [
-  { id: 'q1', companyId: 'c1', totalCalls: 50000, usedCalls: 32500, warningThreshold: 40000, expiresAt: '2026-12-31' },
-  { id: 'q2', companyId: 'c2', totalCalls: 30000, usedCalls: 28500, warningThreshold: 24000, expiresAt: '2026-08-15' },
-  { id: 'q3', companyId: 'c3', totalCalls: 100000, usedCalls: 45000, warningThreshold: 80000, expiresAt: '2027-01-01' },
-  { id: 'q4', companyId: 'c4', totalCalls: 20000, usedCalls: 8000, warningThreshold: 16000, expiresAt: '2026-09-30' },
-  { id: 'q5', companyId: 'c5', totalCalls: 40000, usedCalls: 12000, warningThreshold: 32000, expiresAt: '2026-11-20' },
+  { id: 'q1', companyId: 'c1', totalCalls: 50000, usedCalls: 32500, warningThreshold: 40000, expiresAt: '2026-12-31', renewalNotice: false },
+  { id: 'q2', companyId: 'c2', totalCalls: 30000, usedCalls: 28500, warningThreshold: 24000, expiresAt: '2026-06-25', renewalNotice: true },
+  { id: 'q3', companyId: 'c3', totalCalls: 100000, usedCalls: 45000, warningThreshold: 80000, expiresAt: '2027-01-01', renewalNotice: false },
+  { id: 'q4', companyId: 'c4', totalCalls: 20000, usedCalls: 8000, warningThreshold: 16000, expiresAt: '2026-07-10', renewalNotice: true },
+  { id: 'q5', companyId: 'c5', totalCalls: 40000, usedCalls: 12000, warningThreshold: 32000, expiresAt: '2026-11-20', renewalNotice: false },
 ];
 
 export const mockPersonalities: Personality[] = [
@@ -130,7 +141,7 @@ export const mockPersonalities: Personality[] = [
     price: 5999,
     description: '金融行业培训专家，具备深厚的金融理论基础和丰富的实战经验。擅长风险管理、合规运营等专业培训。',
     capabilities: ['风险培训', '合规教育', '产品知识', '销售技巧', '案例复盘'],
-    isActive: true,
+    isActive: false,
   },
   {
     id: 'p7',
@@ -215,6 +226,8 @@ export const mockApplications: Application[] = [
     budget: 14995,
     status: 'approved',
     createdAt: '2026-06-05',
+    approvedAt: '2026-06-06',
+    assignedEmployees: ['e2', 'e5'],
   },
   {
     id: 'a2',
@@ -239,21 +252,22 @@ export const mockApplications: Application[] = [
     expectedDate: '2026-07-15',
     budget: 9998,
     status: 'rejected',
-    rejectionReason: '预算超出本季度额度，请调整采购数量或等待下季度',
     createdAt: '2026-06-01',
+    rejectionReason: '预算超出本季度额度，请调整采购数量或等待下季度',
   },
 ];
 
 export const mockAssignments: Assignment[] = [
-  { id: 'as1', applicationId: 'a1', userId: 'u1', userName: '张明', personalityId: 'p1', personality: mockPersonalities[0], expiresAt: '2027-06-30', isActive: true },
-  { id: 'as2', applicationId: 'a1', userId: 'u2', userName: '李华', personalityId: 'p1', personality: mockPersonalities[0], expiresAt: '2027-06-30', isActive: true },
-  { id: 'as3', applicationId: 'a1', userId: 'u3', userName: '王芳', personalityId: 'p1', personality: mockPersonalities[0], expiresAt: '2027-06-30', isActive: true },
+  { id: 'as1', applicationId: 'a1', userId: 'e2', userName: '李华', personalityId: 'p1', personality: mockPersonalities[0], expiresAt: '2027-06-30', isActive: true, assignedAt: '2026-06-06' },
+  { id: 'as2', applicationId: 'a1', userId: 'e5', userName: '周敏', personalityId: 'p1', personality: mockPersonalities[0], expiresAt: '2027-06-30', isActive: true, assignedAt: '2026-06-06' },
 ];
 
 export const mockAlerts: Alert[] = [
   { id: 'al1', companyId: 'c2', type: 'quota_warning', description: 'API调用量已达到限额的95%，剩余500次调用额度', status: 'open', createdAt: '2026-06-12' },
-  { id: 'al2', companyId: 'c1', type: 'anomaly', description: '人格"快手小秘"在6月11日出现异常高的并发请求', status: 'resolved', createdAt: '2026-06-11', resolvedAt: '2026-06-11' },
-  { id: 'al3', companyId: 'c3', type: 'compliance', description: '人格"铁嘴销售"合规等级变更通知', status: 'open', createdAt: '2026-06-10' },
+  { id: 'al2', companyId: 'c1', type: 'anomaly', description: '人格"快手小秘"在6月11日出现异常高的并发请求', status: 'resolved', createdAt: '2026-06-11', resolvedAt: '2026-06-11', relatedPersonalityId: 'p7' },
+  { id: 'al3', companyId: 'c3', type: 'compliance', description: '人格"铁嘴销售"合规等级变更通知', status: 'open', createdAt: '2026-06-10', relatedPersonalityId: 'p5' },
+  { id: 'al4', companyId: 'c2', type: 'expiring_soon', description: '企业"环球贸易有限公司"服务将于2026-06-25到期，请及时续约', status: 'open', createdAt: '2026-06-10', relatedCompanyId: 'c2' },
+  { id: 'al5', companyId: 'c4', type: 'expiring_soon', description: '企业"教育培训学院"服务将于2026-07-10到期，请及时续约', status: 'open', createdAt: '2026-06-12', relatedCompanyId: 'c4' },
 ];
 
 export const mockUsageStats: UsageStats = {
@@ -272,11 +286,11 @@ export const mockUsageStats: UsageStats = {
 };
 
 export const mockEmployeeUsage: EmployeeUsage[] = [
-  { id: 'e1', name: '张明', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhang', assignedPersonas: [{ id: 'p1', name: '小智客服' }], callCount: 4520, satisfaction: 4.8 },
-  { id: 'e2', name: '李华', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Li', assignedPersonas: [{ id: 'p1', name: '小智客服' }, { id: 'p3', name: '智讲导师' }], callCount: 3280, satisfaction: 4.7 },
+  { id: 'e2', name: '李华', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Li', assignedPersonas: [{ id: 'p1', name: '小智客服' }], callCount: 4520, satisfaction: 4.8 },
+  { id: 'e5', name: '周敏', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhou', assignedPersonas: [{ id: 'p1', name: '小智客服' }], callCount: 3280, satisfaction: 4.7 },
   { id: 'e3', name: '王芳', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wang', assignedPersonas: [{ id: 'p2', name: '阳光销售' }], callCount: 2890, satisfaction: 4.5 },
   { id: 'e4', name: '赵伟', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhao', assignedPersonas: [{ id: 'p4', name: '暖心客服' }], callCount: 2150, satisfaction: 4.9 },
-  { id: 'e5', name: '周敏', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhou', assignedPersonas: [{ id: 'p3', name: '智讲导师' }], callCount: 1980, satisfaction: 4.6 },
+  { id: 'e6', name: '吴强', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wu', assignedPersonas: [{ id: 'p3', name: '智讲导师' }], callCount: 1980, satisfaction: 4.6 },
 ];
 
 export const industries = ['电商', '金融', '教育', '医疗', '房产', '科技', '美妆', '零售', '通用'];

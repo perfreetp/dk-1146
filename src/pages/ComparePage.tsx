@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { QuestionInput } from '../components/comparison/QuestionInput';
 import { ComparisonResult } from '../components/comparison/ComparisonResult';
@@ -10,15 +11,32 @@ import type { EvaluationResult, Personality } from '../types';
 import { Check, Sparkles } from 'lucide-react';
 
 export function ComparePage() {
-  const { shortlist } = usePersonalityStore();
+  const [searchParams] = useSearchParams();
+  const { shortlist, personalities } = usePersonalityStore();
   const [selectedPersonalityIds, setSelectedPersonalityIds] = useState<string[]>([]);
   const [question, setQuestion] = useState('');
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const availablePersonalities = shortlist.length > 0 ? shortlist.map((s) => s.personality) : mockPersonalities.slice(0, 6);
+  useEffect(() => {
+    const ids = searchParams.get('ids');
+    if (ids) {
+      const parsedIds = ids.split(',').filter((id) => {
+        const p = personalities.find((personality) => personality.id === id);
+        return p && p.isActive;
+      });
+      setSelectedPersonalityIds(parsedIds);
+    }
+  }, [searchParams, personalities]);
+
+  const availablePersonalities = shortlist.length > 0
+    ? shortlist.map((s) => s.personality)
+    : personalities.filter((p) => p.isActive).slice(0, 6);
 
   const togglePersonality = (id: string) => {
+    const personality = personalities.find((p) => p.id === id);
+    if (!personality || !personality.isActive) return;
+
     setSelectedPersonalityIds((prev) =>
       prev.includes(id) ? prev.filter((pid) => pid !== id) : prev.length < 5 ? [...prev, id] : prev
     );
@@ -79,7 +97,7 @@ export function ComparePage() {
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     const evaluationResults: EvaluationResult[] = availablePersonalities
-      .filter((p) => selectedPersonalityIds.includes(p.id))
+      .filter((p) => selectedPersonalityIds.includes(p.id) && p.isActive)
       .map((personality) => ({
         personalityId: personality.id,
         personality,
@@ -110,16 +128,25 @@ export function ComparePage() {
             <Sparkles className="w-5 h-5 text-accent" />
             <h3 className="font-semibold text-dark-900">选择要对比的人格</h3>
             <Badge variant="info">{selectedPersonalityIds.length}/5</Badge>
+            {selectedPersonalityIds.length > 0 && (
+              <Badge variant="success" className="ml-2">
+                已从{selectedPersonalityIds.length > 1 ? '候选清单' : '人格详情'}选中
+              </Badge>
+            )}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {availablePersonalities.map((personality) => {
               const isSelected = selectedPersonalityIds.includes(personality.id);
+              const isDisabled = !personality.isActive;
               return (
                 <button
                   key={personality.id}
                   onClick={() => togglePersonality(personality.id)}
+                  disabled={isDisabled}
                   className={`p-3 rounded-xl border-2 transition-all text-left ${
-                    isSelected
+                    isDisabled
+                      ? 'border-dark-100 opacity-50 cursor-not-allowed bg-dark-50'
+                      : isSelected
                       ? 'border-primary bg-primary/5'
                       : 'border-dark-100 hover:border-dark-200'
                   }`}
@@ -131,7 +158,10 @@ export function ComparePage() {
                       className="w-10 h-10 rounded-lg object-cover bg-dark-50"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-dark-900 text-sm truncate">{personality.name}</p>
+                      <p className="font-medium text-dark-900 text-sm truncate">
+                        {personality.name}
+                        {isDisabled && <span className="text-red-500 ml-1">(已停用)</span>}
+                      </p>
                       <p className="text-xs text-dark-400 truncate">
                         {personality.taskType === 'customer_service'
                           ? '客服'
@@ -140,7 +170,7 @@ export function ComparePage() {
                           : '培训'}
                       </p>
                     </div>
-                    {isSelected && (
+                    {isSelected && !isDisabled && (
                       <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                         <Check className="w-3 h-3 text-white" />
                       </div>

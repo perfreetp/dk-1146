@@ -1,8 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import type { Personality } from '../../types';
 import { Modal } from '../common/Modal';
 import { Badge, ComplianceBadge } from '../common/Badge';
 import { Button } from '../common/Button';
-import { Star, Phone, CheckCircle2, Play } from 'lucide-react';
+import { Star, CheckCircle2, Play } from 'lucide-react';
 import { usePersonalityStore } from '../../stores/personalityStore';
 
 interface PersonalityDetailProps {
@@ -12,6 +13,7 @@ interface PersonalityDetailProps {
 }
 
 export function PersonalityDetail({ personality, isOpen, onClose }: PersonalityDetailProps) {
+  const navigate = useNavigate();
   const { shortlist, addToShortlist, removeFromShortlist } = usePersonalityStore();
 
   if (!personality) return null;
@@ -27,6 +29,21 @@ export function PersonalityDetail({ personality, isOpen, onClose }: PersonalityD
     }
   };
 
+  const handleStartTrial = () => {
+    navigate(`/compare?ids=${personality.id}`);
+    onClose();
+  };
+
+  const handleTrialWithShortlist = () => {
+    const shortlistIds = shortlist.map((s) => s.personalityId);
+    if (shortlistIds.length > 0) {
+      navigate(`/compare?ids=${[personality.id, ...shortlistIds].slice(0, 5).join(',')}`);
+    } else {
+      navigate(`/compare?ids=${personality.id}`);
+    }
+    onClose();
+  };
+
   const taskTypeLabels = {
     customer_service: '客服',
     sales: '销售陪练',
@@ -37,11 +54,21 @@ export function PersonalityDetail({ personality, isOpen, onClose }: PersonalityD
     <Modal isOpen={isOpen} onClose={onClose} title={personality.name} size="xl">
       <div className="space-y-6">
         <div className="flex gap-6">
-          <img
-            src={personality.avatar}
-            alt={personality.name}
-            className="w-32 h-32 rounded-xl object-cover bg-dark-50 flex-shrink-0"
-          />
+          <div className="relative flex-shrink-0">
+            <img
+              src={personality.avatar}
+              alt={personality.name}
+              className={`w-32 h-32 rounded-xl object-cover bg-dark-50 ${
+                !personality.isActive ? 'opacity-50' : ''
+              }`}
+            />
+            {!personality.isActive && (
+              <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                <span className="text-white text-sm font-medium">已停用</span>
+              </div>
+            )}
+          </div>
+
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
               <Badge variant="primary">{taskTypeLabels[personality.taskType]}</Badge>
@@ -56,7 +83,6 @@ export function PersonalityDetail({ personality, isOpen, onClose }: PersonalityD
                 <span className="text-sm text-dark-400">(4.8分)</span>
               </div>
               <div className="flex items-center gap-1 text-dark-500">
-                <Phone className="w-5 h-5" />
                 <span>{(personality.monthlyCalls / 1000).toFixed(0)}K 月调用</span>
               </div>
               <div className="text-2xl font-bold text-primary">
@@ -126,19 +152,32 @@ export function PersonalityDetail({ personality, isOpen, onClose }: PersonalityD
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4 border-t border-dark-100">
-          <Button variant="primary" size="lg" className="flex-1">
-            <Play className="w-5 h-5 mr-2" />
-            发起试用
-          </Button>
-          <Button
-            variant={isInShortlist ? 'secondary' : 'outline'}
-            size="lg"
-            onClick={handleToggleShortlist}
-          >
-            {isInShortlist ? '已加入清单' : '加入候选'}
-          </Button>
-        </div>
+        {personality.isActive ? (
+          <div className="flex gap-3 pt-4 border-t border-dark-100">
+            <Button variant="primary" size="lg" className="flex-1" onClick={handleStartTrial}>
+              <Play className="w-5 h-5 mr-2" />
+              发起试用
+            </Button>
+            {shortlist.length > 0 && (
+              <Button variant="secondary" size="lg" onClick={handleTrialWithShortlist}>
+                与候选人格对比 ({shortlist.length})
+              </Button>
+            )}
+            <Button
+              variant={isInShortlist ? 'secondary' : 'outline'}
+              size="lg"
+              onClick={handleToggleShortlist}
+            >
+              {isInShortlist ? '已加入清单' : '加入候选'}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex gap-3 pt-4 border-t border-dark-100">
+            <Button variant="secondary" size="lg" className="flex-1" disabled>
+              该人格已停用
+            </Button>
+          </div>
+        )}
       </div>
     </Modal>
   );
