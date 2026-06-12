@@ -1,16 +1,15 @@
 import { PageContainer } from '../components/layout/PageContainer';
 import { Card, CardTitle } from '../components/common/Card';
-import { Badge, Button } from '../components/common/Badge';
+import { Badge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
 import { StatsCard } from '../components/monitor/StatsCard';
 import { UsageChart } from '../components/monitor/UsageChart';
 import { AlertList } from '../components/monitor/AlertList';
-import { useMonitorStore } from '../stores/monitorStore';
 import { usePersonalityStore } from '../stores/personalityStore';
 import { Phone, Users, Star, AlertTriangle, Calendar } from 'lucide-react';
 
 export function MonitorPage() {
-  const { usageStats, alerts, resolveAlert } = useMonitorStore();
-  const { assignments, employees } = usePersonalityStore();
+  const { usageStats, alerts, assignments, employees, resolveAlert } = usePersonalityStore();
 
   const openAlerts = alerts.filter((a) => a.status === 'open');
   const renewalAlerts = alerts.filter((a) => a.type === 'expiring_soon' && a.status === 'open');

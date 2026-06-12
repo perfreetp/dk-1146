@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Card, CardTitle } from '../components/common/Card';
-import { Badge, ComplianceBadge } from '../components/common/Badge';
+import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
 import { usePersonalityStore } from '../stores/personalityStore';
-import { useMonitorStore } from '../stores/monitorStore';
 import {
   Users,
   DollarSign,
@@ -20,7 +19,7 @@ import {
   PowerOff,
   AlertCircle,
 } from 'lucide-react';
-import type { Application, Personality } from '../types';
+import type { Application } from '../types';
 
 export function AdminPage() {
   const {
@@ -31,8 +30,13 @@ export function AdminPage() {
     togglePersonalityActive,
     personalities,
     employees,
+    alerts,
+    resolveAlert,
+    quotas,
+    currentQuota,
+    updateQuota,
+    resolveQuotaAlert,
   } = usePersonalityStore();
-  const { quotas, currentQuota, updateQuota, alerts, resolveAlert, resolveQuotaAlert } = useMonitorStore();
 
   const [activeTab, setActiveTab] = useState<'applications' | 'quota' | 'alerts' | 'personalities'>('applications');
   const [rejectModal, setRejectModal] = useState<{ open: boolean; applicationId: string }>({
@@ -470,6 +474,26 @@ export function AdminPage() {
                               已续约
                             </Button>
                           )}
+                          {(alert.type === 'anomaly' || alert.type === 'compliance') &&
+                            alert.relatedPersonalityId && (
+                              <>
+                                {(() => {
+                                  const relatedPersonality = personalities.find(
+                                    (p) => p.id === alert.relatedPersonalityId
+                                  );
+                                  return relatedPersonality && relatedPersonality.isActive ? (
+                                    <Button
+                                      variant="danger"
+                                      size="sm"
+                                      onClick={() => togglePersonalityActive(alert.relatedPersonalityId!)}
+                                    >
+                                      <PowerOff className="w-4 h-4 mr-1" />
+                                      停用人格
+                                    </Button>
+                                  ) : null;
+                                })()}
+                              </>
+                            )}
                           <Button variant="outline" size="sm" onClick={() => resolveAlert(alert.id)}>
                             标记已解决
                           </Button>

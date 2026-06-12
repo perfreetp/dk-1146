@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { Personality, FilterOptions, ShortlistItem, Application, Assignment, Employee } from '../types';
-import { mockPersonalities, mockShortlists, mockApplications, mockAssignments, mockEmployees } from '../data/mockData';
+import type { Personality, FilterOptions, ShortlistItem, Application, Assignment, Employee, Alert, Quota, UsageStats } from '../types';
+import { mockPersonalities, mockShortlists, mockApplications, mockAssignments, mockEmployees, mockAlerts, mockQuotas, mockUsageStats } from '../data/mockData';
 
 const STORAGE_KEY = 'ai_personality_market';
 
@@ -10,6 +10,8 @@ interface StoreData {
   applications: Application[];
   assignments: Assignment[];
   employees: Employee[];
+  alerts: Alert[];
+  quotas: Quota[];
 }
 
 function loadFromStorage(): StoreData {
@@ -27,6 +29,8 @@ function loadFromStorage(): StoreData {
     applications: mockApplications,
     assignments: mockAssignments,
     employees: mockEmployees,
+    alerts: mockAlerts,
+    quotas: mockQuotas,
   };
 }
 
@@ -46,6 +50,10 @@ interface PersonalityState {
   applications: Application[];
   assignments: Assignment[];
   employees: Employee[];
+  alerts: Alert[];
+  quotas: Quota[];
+  usageStats: UsageStats;
+  currentQuota: Quota | null;
   filters: FilterOptions;
   isLoading: boolean;
   initialize: () => void;
@@ -60,8 +68,9 @@ interface PersonalityState {
   rejectApplication: (id: string, reason: string) => void;
   assignEmployeesToApplication: (applicationId: string, employeeIds: string[]) => void;
   togglePersonalityActive: (personalityId: string) => void;
-  updateQuotaRenewalNotice: (companyId: string, notice: boolean) => void;
   resolveAlert: (alertId: string) => void;
+  resolveQuotaAlert: (companyId: string) => void;
+  updateQuota: (id: string, totalCalls: number, warningThreshold: number) => void;
 }
 
 export const usePersonalityStore = create<PersonalityState>((set, get) => ({
@@ -72,6 +81,10 @@ export const usePersonalityStore = create<PersonalityState>((set, get) => ({
   applications: [],
   assignments: [],
   employees: [],
+  alerts: [],
+  quotas: [],
+  usageStats: mockUsageStats,
+  currentQuota: null,
   filters: { showInactive: false },
   isLoading: false,
 
@@ -84,6 +97,9 @@ export const usePersonalityStore = create<PersonalityState>((set, get) => ({
       applications: data.applications,
       assignments: data.assignments,
       employees: data.employees,
+      alerts: data.alerts,
+      quotas: data.quotas,
+      currentQuota: data.quotas[0] || null,
     });
   },
 
@@ -184,11 +200,14 @@ export const usePersonalityStore = create<PersonalityState>((set, get) => ({
 
   submitApplication: (usage, expectedDate, budget) => {
     const state = get();
+    const activeShortlist = state.shortlist.filter((item) => item.personality.isActive);
+    if (activeShortlist.length === 0) return;
+
     const newApplication: Application = {
       id: `a${Date.now()}`,
       userId: 'u1',
       userName: '张明',
-      items: state.shortlist.map((item, index) => ({
+      items: activeShortlist.map((item, index) => ({
         id: `ai${Date.now()}_${index}`,
         applicationId: `a${Date.now()}`,
         personalityId: item.personalityId,
@@ -262,16 +281,65 @@ export const usePersonalityStore = create<PersonalityState>((set, get) => ({
     const newPersonalities = state.personalities.map((p) =>
       p.id === personalityId ? { ...p, isActive: !p.isActive } : p
     );
-    set({ personalities: newPersonalities });
+    const updatedShortlist = state.shortlist.filter((item) =>
+      item.personalityId !== personalityId
+    );
+    set({ 
+      personalities: newPersonalities,
+      shortlist: updatedShortlist
+    });
     get().applyFilters();
-    saveToStorage({ ...state, personalities: newPersonalities });
-  },
-
-  updateQuotaRenewalNotice: (companyId, notice) => {
-    console.log('Update quota renewal notice:', companyId, notice);
+    saveToStorage({ ...state, personalities: newPersonalities, shortlist: updatedShortlist });
   },
 
   resolveAlert: (alertId) => {
-    console.log('Resolve alert:', alertId);
+    const state = get();
+    const alertToResolve = state.alerts.find((a) => a.id === alertId);
+    
+    let newAlerts = state.alerts.map((alert) =>
+      alert.id === alertId
+        ? { ...alert, status: 'resolved' as const, resolvedAt: new Date().toISOString().split('T')[0] }
+        : alert
+    );
+
+    let newQuotas = [...state.quotas];
+    if (alertToResolve?.type === 'expiring_soon' && alertToResolve?.companyId) {
+      newQuotas = state.quotas.map((quota) =>
+        quota.companyId === alertToResolve.companyId
+          ? { ...quota, renewalNotice: false }
+          : quota
+      );
+    }
+
+    set({ alerts: newAlerts, quotas: newQuotas });
+    saveToStorage({ ...state, alerts: newAlerts, quotas: newQuotas });
+  },
+
+  resolveQuotaAlert: (companyId) => {
+    const state = get();
+    const newAlerts = state.alerts.map((alert) =>
+      alert.companyId === companyId && alert.type === 'expiring_soon'
+        ? { ...alert, status: 'resolved' as const, resolvedAt: new Date().toISOString().split('T')[0] }
+        : alert
+    );
+    const newQuotas = state.quotas.map((quota) =>
+      quota.companyId === companyId ? { ...quota, renewalNotice: false } : quota
+    );
+    set({ alerts: newAlerts, quotas: newQuotas });
+    saveToStorage({ ...state, alerts: newAlerts, quotas: newQuotas });
+  },
+
+  updateQuota: (id, totalCalls, warningThreshold) => {
+    const state = get();
+    const newQuotas = state.quotas.map((q) =>
+      q.id === id ? { ...q, totalCalls, warningThreshold } : q
+    );
+    set({
+      quotas: newQuotas,
+      currentQuota: state.currentQuota?.id === id
+        ? { ...state.currentQuota, totalCalls, warningThreshold }
+        : state.currentQuota,
+    });
+    saveToStorage({ ...state, quotas: newQuotas });
   },
 }));

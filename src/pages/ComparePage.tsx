@@ -11,26 +11,34 @@ import { Check, Sparkles } from 'lucide-react';
 
 export function ComparePage() {
   const [searchParams] = useSearchParams();
-  const { shortlist, personalities } = usePersonalityStore();
+  const { personalities } = usePersonalityStore();
   const [selectedPersonalityIds, setSelectedPersonalityIds] = useState<string[]>([]);
   const [question, setQuestion] = useState('');
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [initializedFromUrl, setInitializedFromUrl] = useState(false);
+  const [currentUrlIds, setCurrentUrlIds] = useState<string | null>(null);
 
   useEffect(() => {
     const ids = searchParams.get('ids');
-    if (ids && !initializedFromUrl) {
-      const parsedIds = ids.split(',').filter((id) => {
-        const p = personalities.find((personality) => personality.id === id);
-        return p && p.isActive;
-      });
-      if (parsedIds.length > 0) {
-        setSelectedPersonalityIds(parsedIds);
-        setInitializedFromUrl(true);
+    const newIds = ids || null;
+
+    if (newIds !== currentUrlIds) {
+      setCurrentUrlIds(newIds);
+      if (newIds) {
+        const parsedIds = newIds.split(',').filter((id) => {
+          const p = personalities.find((personality) => personality.id === id);
+          return p && p.isActive;
+        });
+        if (parsedIds.length > 0) {
+          setSelectedPersonalityIds(parsedIds);
+        } else {
+          setSelectedPersonalityIds([]);
+        }
+      } else {
+        setSelectedPersonalityIds([]);
       }
     }
-  }, [searchParams, personalities, initializedFromUrl]);
+  }, [searchParams, personalities, currentUrlIds]);
 
   const allActivePersonalities = useMemo(() => {
     return personalities.filter((p) => p.isActive);

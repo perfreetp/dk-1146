@@ -1,24 +1,30 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
-import { Card, CardTitle } from '../components/common/Card';
+import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { Input, Textarea } from '../components/common/Input';
 import { usePersonalityStore } from '../stores/personalityStore';
-import { Star, Trash2, Send, Calendar, DollarSign, CheckCircle, Play } from 'lucide-react';
+import { Star, Trash2, Send, Calendar, DollarSign, CheckCircle, Play, PowerOff } from 'lucide-react';
 
 export function ShortlistPage() {
   const navigate = useNavigate();
-  const { shortlist, removeFromShortlist, submitApplication } = usePersonalityStore();
+  const { shortlist, removeFromShortlist, submitApplication, personalities } = usePersonalityStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [usage, setUsage] = useState('');
   const [expectedDate, setExpectedDate] = useState('');
   const [budget, setBudget] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const totalBudget = shortlist.reduce((sum, item) => sum + item.personality.price, 0);
+  const activeShortlistItems = shortlist.filter((item) => {
+    const personality = personalities.find((p) => p.id === item.personalityId);
+    return personality && personality.isActive;
+  });
+
+  const totalBudget = activeShortlistItems.reduce((sum, item) => sum + item.personality.price, 0);
 
   const handleSubmit = () => {
     if (!usage || !expectedDate || !budget) return;
@@ -34,8 +40,8 @@ export function ShortlistPage() {
   };
 
   const handleTrialAll = () => {
-    if (shortlist.length > 0) {
-      const ids = shortlist.map((s) => s.personalityId).join(',');
+    if (activeShortlistItems.length > 1) {
+      const ids = activeShortlistItems.map((s) => s.personalityId).join(',');
       navigate(`/compare?ids=${ids}`);
     }
   };
@@ -47,11 +53,11 @@ export function ShortlistPage() {
           <div>
             <h1 className="text-3xl font-bold text-dark-900 mb-2">候选清单</h1>
             <p className="text-dark-500">
-              已收藏 {shortlist.length} 个人格，总预算 ¥{totalBudget.toLocaleString()}
+              已收藏 {shortlist.length} 个人格（含 {shortlist.length - activeShortlistItems.length} 个已停用），活跃人格总预算 ¥{totalBudget.toLocaleString()}
             </p>
           </div>
           <div className="flex gap-3">
-            {shortlist.length > 1 && (
+            {activeShortlistItems.length > 1 && (
               <Button variant="outline" onClick={handleTrialAll}>
                 <Play className="w-4 h-4 mr-2" />
                 对比试用全部
@@ -60,7 +66,7 @@ export function ShortlistPage() {
             <Button
               variant="primary"
               onClick={() => setIsModalOpen(true)}
-              disabled={shortlist.length === 0}
+              disabled={activeShortlistItems.length === 0}
             >
               <Send className="w-4 h-4 mr-2" />
               提交采购申请
@@ -83,26 +89,46 @@ export function ShortlistPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {shortlist.map((item, index) => (
+            {shortlist.map((item, index) => {
+              const isActive = (() => {
+                const personality = personalities.find((p) => p.id === item.personalityId);
+                return personality && personality.isActive;
+              })();
+              return (
               <Card
                 key={item.id}
-                className="animate-slide-up"
+                className={`animate-slide-up ${!isActive ? 'opacity-60 bg-dark-50' : ''}`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="flex items-start gap-4">
-                  <img
-                    src={item.personality.avatar}
-                    alt={item.personality.name}
-                    className="w-20 h-20 rounded-xl object-cover bg-dark-50 flex-shrink-0"
-                  />
+                  <div className="relative">
+                    <img
+                      src={item.personality.avatar}
+                      alt={item.personality.name}
+                      className="w-20 h-20 rounded-xl object-cover bg-dark-50 flex-shrink-0"
+                    />
+                    {!isActive && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
+                        <PowerOff className="w-8 h-8 text-white" />
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="text-lg font-semibold text-dark-900">
-                          {item.personality.name}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className={`text-lg font-semibold ${!isActive ? 'text-dark-500' : 'text-dark-900'}`}>
+                            {item.personality.name}
+                          </h3>
+                          {!isActive && (
+                            <Badge variant="default" className="flex items-center gap-1">
+                              <PowerOff className="w-3 h-3" />
+                              已停用
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="primary">
+                          <Badge variant={isActive ? 'primary' : 'default'}>
                             {item.personality.taskType === 'customer_service'
                               ? '客服'
                               : item.personality.taskType === 'sales'
@@ -118,7 +144,7 @@ export function ShortlistPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">
+                        <p className={`text-2xl font-bold ${isActive ? 'text-primary' : 'text-dark-400'}`}>
                           ¥{item.personality.price.toLocaleString()}
                         </p>
                         <p className="text-sm text-dark-400">/月</p>
@@ -140,6 +166,7 @@ export function ShortlistPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={!isActive}
                         onClick={() => navigate(`/compare?ids=${item.personalityId}`)}
                       >
                         <Play className="w-4 h-4 mr-1" />
@@ -155,7 +182,8 @@ export function ShortlistPage() {
                   </button>
                 </div>
               </Card>
-            ))}
+            );
+            })}
 
             <Card className="bg-gradient-to-br from-primary/5 to-accent/5">
               <div className="flex items-center justify-between">
@@ -191,13 +219,16 @@ export function ShortlistPage() {
           ) : (
             <div className="space-y-4">
               <div className="bg-dark-50 rounded-xl p-4 mb-4">
-                <p className="text-sm text-dark-500 mb-2">申请购买</p>
+                <p className="text-sm text-dark-500 mb-2">申请购买（仅包含活跃人格）</p>
                 <div className="flex flex-wrap gap-2">
-                  {shortlist.map((item) => (
+                  {activeShortlistItems.map((item) => (
                     <Badge key={item.id} variant="primary">
                       {item.personality.name}
                     </Badge>
                   ))}
+                  {activeShortlistItems.length === 0 && (
+                    <span className="text-sm text-dark-400">暂无活跃人格可购买</span>
+                  )}
                 </div>
               </div>
 
