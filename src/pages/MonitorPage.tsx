@@ -1,6 +1,6 @@
 import { PageContainer } from '../components/layout/PageContainer';
 import { Card, CardTitle } from '../components/common/Card';
-import { Badge } from '../components/common/Badge';
+import { Badge, Button } from '../components/common/Badge';
 import { StatsCard } from '../components/monitor/StatsCard';
 import { UsageChart } from '../components/monitor/UsageChart';
 import { AlertList } from '../components/monitor/AlertList';
@@ -10,9 +10,11 @@ import { Phone, Users, Star, AlertTriangle, Calendar } from 'lucide-react';
 
 export function MonitorPage() {
   const { usageStats, alerts, resolveAlert } = useMonitorStore();
-  const { assignments, employees } = usePersonalityStore();
+  const { assignments, employees, applications } = usePersonalityStore();
 
   const openAlerts = alerts.filter((a) => a.status === 'open');
+  const renewalAlerts = alerts.filter((a) => a.type === 'expiring_soon' && a.status === 'open');
+  const otherAlerts = alerts.filter((a) => a.type !== 'expiring_soon' && a.status === 'open');
 
   const getEmployeeUsage = () => {
     const employeeMap = new Map<string, { name: string; avatar: string; personas: { id: string; name: string }[]; callCount: number; satisfaction: number }>();
@@ -90,9 +92,37 @@ export function MonitorPage() {
 
           <Card>
             <CardTitle className="mb-4">异常告警</CardTitle>
-            <AlertList alerts={openAlerts.slice(0, 3)} onResolve={resolveAlert} />
+            <AlertList alerts={otherAlerts} onResolve={resolveAlert} />
           </Card>
         </div>
+
+        {renewalAlerts.length > 0 && (
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardTitle className="text-blue-700 flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              服务续约提醒
+            </CardTitle>
+            <div className="space-y-3 mt-4">
+              {renewalAlerts.map((alert) => (
+                <div key={alert.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-blue-100">
+                  <div>
+                    <p className="text-dark-700">{alert.description}</p>
+                    <p className="text-xs text-dark-400 mt-1">
+                      {new Date(alert.createdAt).toLocaleDateString('zh-CN')}
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => resolveAlert(alert.id)}
+                  >
+                    已续约
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card>
           <CardTitle className="mb-4">员工使用明细</CardTitle>
@@ -157,13 +187,6 @@ export function MonitorPage() {
             </div>
           )}
         </Card>
-
-        {openAlerts.length > 3 && (
-          <Card>
-            <CardTitle className="mb-4">全部告警</CardTitle>
-            <AlertList alerts={alerts} onResolve={resolveAlert} />
-          </Card>
-        )}
       </div>
     </PageContainer>
   );

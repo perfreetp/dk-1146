@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PageContainer } from '../components/layout/PageContainer';
 import { QuestionInput } from '../components/comparison/QuestionInput';
@@ -6,7 +6,6 @@ import { ComparisonResult } from '../components/comparison/ComparisonResult';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { usePersonalityStore } from '../stores/personalityStore';
-import { mockPersonalities } from '../data/mockData';
 import type { EvaluationResult, Personality } from '../types';
 import { Check, Sparkles } from 'lucide-react';
 
@@ -25,13 +24,24 @@ export function ComparePage() {
         const p = personalities.find((personality) => personality.id === id);
         return p && p.isActive;
       });
-      setSelectedPersonalityIds(parsedIds);
+      if (parsedIds.length > 0) {
+        setSelectedPersonalityIds(parsedIds);
+      }
     }
   }, [searchParams, personalities]);
 
-  const availablePersonalities = shortlist.length > 0
-    ? shortlist.map((s) => s.personality)
-    : personalities.filter((p) => p.isActive).slice(0, 6);
+  const allActivePersonalities = useMemo(() => {
+    return personalities.filter((p) => p.isActive);
+  }, [personalities]);
+
+  const displayPersonalities = useMemo(() => {
+    if (selectedPersonalityIds.length > 0) {
+      return selectedPersonalityIds
+        .map((id) => allActivePersonalities.find((p) => p.id === id))
+        .filter((p): p is Personality => p !== undefined);
+    }
+    return allActivePersonalities.slice(0, 6);
+  }, [selectedPersonalityIds, allActivePersonalities]);
 
   const togglePersonality = (id: string) => {
     const personality = personalities.find((p) => p.id === id);
@@ -96,8 +106,10 @@ export function ComparePage() {
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const evaluationResults: EvaluationResult[] = availablePersonalities
-      .filter((p) => selectedPersonalityIds.includes(p.id) && p.isActive)
+    const idsToEvaluate = selectedPersonalityIds.length > 0 ? selectedPersonalityIds : displayPersonalities.slice(0, 5).map((p) => p.id);
+
+    const evaluationResults: EvaluationResult[] = displayPersonalities
+      .filter((p) => idsToEvaluate.includes(p.id) && p.isActive)
       .map((personality) => ({
         personalityId: personality.id,
         personality,
@@ -127,15 +139,15 @@ export function ComparePage() {
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-accent" />
             <h3 className="font-semibold text-dark-900">选择要对比的人格</h3>
-            <Badge variant="info">{selectedPersonalityIds.length}/5</Badge>
-            {selectedPersonalityIds.length > 0 && (
+            <Badge variant="info">{selectedPersonalityIds.length > 0 ? selectedPersonalityIds.length : displayPersonalities.length}/5</Badge>
+            {searchParams.get('ids') && (
               <Badge variant="success" className="ml-2">
-                已从{selectedPersonalityIds.length > 1 ? '候选清单' : '人格详情'}选中
+                从{selectedPersonalityIds.length > 1 ? '候选清单' : '人格详情'}选中
               </Badge>
             )}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {availablePersonalities.map((personality) => {
+            {displayPersonalities.map((personality) => {
               const isSelected = selectedPersonalityIds.includes(personality.id);
               const isDisabled = !personality.isActive;
               return (
@@ -180,20 +192,27 @@ export function ComparePage() {
               );
             })}
           </div>
+          <p className="text-sm text-dark-400 mt-3">
+            {selectedPersonalityIds.length > 0
+              ? `已选中 ${selectedPersonalityIds.length} 个人格`
+              : `默认展示前 ${Math.min(6, displayPersonalities.length)} 个人格，请点击选择您要对比的人格`}
+          </p>
         </Card>
 
         <QuestionInput onEvaluate={handleEvaluate} isLoading={isLoading} />
 
         {results.length > 0 && <ComparisonResult results={results} question={question} />}
 
-        {selectedPersonalityIds.length === 0 && results.length === 0 && (
+        {results.length === 0 && (
           <Card className="text-center py-12">
             <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Sparkles className="w-8 h-8 text-accent" />
             </div>
             <h3 className="text-lg font-semibold text-dark-900 mb-2">开始您的评测</h3>
             <p className="text-dark-500 max-w-md mx-auto">
-              从左侧选择 2-5 个想要对比的 AI 人格，然后输入您的问题，系统将生成各人格的回答供您对比分析
+              {selectedPersonalityIds.length > 0 || searchParams.get('ids')
+                ? `已选择 ${selectedPersonalityIds.length > 0 ? selectedPersonalityIds.length : displayPersonalities.length} 个人格，请输入您的问题`
+                : '请先选择 2-5 个想要对比的 AI 人格，然后输入您的问题，系统将生成各人格的回答供您对比分析'}
             </p>
           </Card>
         )}

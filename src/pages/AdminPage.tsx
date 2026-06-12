@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { Card, CardTitle } from '../components/common/Card';
-import { Badge, Button } from '../components/common/Badge';
+import { Badge, ComplianceBadge } from '../components/common/Badge';
+import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { Input } from '../components/common/Input';
 import { usePersonalityStore } from '../stores/personalityStore';

@@ -1,8 +1,8 @@
-import type { Alert } from '../../types';
+import type { Alert, AlertType } from '../../types';
 import { Card } from '../common/Card';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
-import { AlertTriangle, Bell, Shield, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Bell, Shield, CheckCircle, Calendar } from 'lucide-react';
 
 interface AlertListProps {
   alerts: Alert[];
@@ -11,22 +11,25 @@ interface AlertListProps {
 }
 
 export function AlertList({ alerts, onResolve, showActions = true }: AlertListProps) {
-  const typeIcons = {
+  const typeIcons: Record<AlertType, typeof AlertTriangle> = {
     anomaly: AlertTriangle,
     quota_warning: Bell,
     compliance: Shield,
+    expiring_soon: Calendar,
   };
 
-  const typeLabels = {
+  const typeLabels: Record<AlertType, string> = {
     anomaly: '异常告警',
     quota_warning: '额度预警',
     compliance: '合规通知',
+    expiring_soon: '续约提醒',
   };
 
-  const typeBadgeVariants = {
-    anomaly: 'danger' as const,
-    quota_warning: 'warning' as const,
-    compliance: 'info' as const,
+  const typeBadgeVariants: Record<AlertType, 'danger' | 'warning' | 'info' | 'default'> = {
+    anomaly: 'danger',
+    quota_warning: 'warning',
+    compliance: 'info',
+    expiring_soon: 'info',
   };
 
   return (
@@ -41,7 +44,10 @@ export function AlertList({ alerts, onResolve, showActions = true }: AlertListPr
         </Card>
       ) : (
         alerts.map((alert) => {
-          const Icon = typeIcons[alert.type];
+          const Icon = typeIcons[alert.type] || AlertTriangle;
+          const label = typeLabels[alert.type] || '未知告警';
+          const badgeVariant = typeBadgeVariants[alert.type] || 'default';
+
           return (
             <Card key={alert.id} className="hover:shadow-card-hover transition-shadow">
               <div className="flex items-start gap-4">
@@ -51,6 +57,8 @@ export function AlertList({ alerts, onResolve, showActions = true }: AlertListPr
                       ? 'bg-red-100 text-red-600'
                       : alert.type === 'quota_warning'
                       ? 'bg-warning/10 text-warning'
+                      : alert.type === 'expiring_soon'
+                      ? 'bg-blue-100 text-blue-600'
                       : 'bg-blue-100 text-blue-600'
                   }`}
                 >
@@ -59,7 +67,7 @@ export function AlertList({ alerts, onResolve, showActions = true }: AlertListPr
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={typeBadgeVariants[alert.type]}>{typeLabels[alert.type]}</Badge>
+                    <Badge variant={badgeVariant}>{label}</Badge>
                     <Badge variant={alert.status === 'open' ? 'danger' : 'success'}>
                       {alert.status === 'open' ? '待处理' : '已解决'}
                     </Badge>
